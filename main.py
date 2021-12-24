@@ -86,31 +86,51 @@ class AnimatedSprite(pygame.sprite.Sprite):
                 self.frames.append(sheet.subsurface(pygame.Rect(frame_location, self.rect.size)))
 
     def update(self):
+        global now_direction
         if pygame.time.get_ticks() / 1000 > self.schet * 0.15:
             self.schet += 1
             self.cur_frame = (self.cur_frame + 1) % len(self.frames)
             self.image = pygame.transform.scale(self.frames[self.cur_frame], (100, 100))
+            if now_direction == "l":
+                self.image = pygame.transform.flip(self.image, True, False)
 
 
 def main():
-    global real_time_but
+    global now_x, now_y, motion, now_direction
     pygame.display.flip()
-    idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, 50, 50)
-    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 50, 50)
+    now_x, now_y = 50, 50
+    idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y)
+    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, -now_x, -now_y)
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a:
-                    real_time_but = "a"
-                if event.key == pygame.K_d:
-                    real_time_but = "d"
+                    motion = "l"
+                elif event.key == pygame.K_d:
+                    motion = "r"
+            elif event.type == pygame.KEYUP:
+                motion = "s"
+                if event.key == pygame.K_KP_ENTER:
+                    print("K_KP_ENTER")
                 if event.key == pygame.K_SPACE:
                     real_time_but = "space"
-                if event.key == pygame.KMOD_SHIFT:
-                    print("SHiFT")
+        if motion == "r":
+            now_direction = "r"
+            idle_player.rect = 1000, 1000
+            now_x += 3
+            walk_player.rect = now_x, now_y
+        elif motion == "l":
+            now_direction = "l"
+            idle_player.rect = 1000, 1000
+            now_x -= 3
+            walk_player.rect = now_x, now_y
+        else:
+            walk_player.rect = 1000, 1000
+            idle_player.rect = now_x, now_y
+
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
         all_sprites.update()
@@ -122,9 +142,10 @@ def main():
 if __name__ == "__main__":
     pygame.init()
     FPS = 50
+    motion = "s"
+    now_direction = "r"
     size = WIDTH, HEIGHT = 700, 500
     screen = pygame.display.set_mode(size)
-    real_time_but = ""
     pygame.display.set_caption("The tale of chelik")
     clock = pygame.time.Clock()
     all_sprites = pygame.sprite.Group()
