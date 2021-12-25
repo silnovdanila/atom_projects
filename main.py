@@ -100,7 +100,9 @@ def main():
     pygame.display.flip()
     now_x, now_y = 50, 50
     idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y)
-    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, -now_x, -now_y)
+    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1000, 1000)
+    run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1000, 1000)
+    last_player = idle_player
     running = True
     while running:
         for event in pygame.event.get():
@@ -111,25 +113,49 @@ def main():
                     motion = "l"
                 elif event.key == pygame.K_d:
                     motion = "r"
+                if pygame.key.get_mods() == 4097:
+                    shift = True
+                else:
+                    shift = False
             elif event.type == pygame.KEYUP:
-                motion = "s"
                 if event.key == pygame.K_KP_ENTER:
                     print("K_KP_ENTER")
                 if event.key == pygame.K_SPACE:
                     real_time_but = "space"
+                if event.key == pygame.K_a or event.key == pygame.K_d:
+                    motion = "s"
+                if 4097 not in pygame.key.get_pressed():
+                    shift = False
         if motion == "r":
-            now_direction = "r"
-            idle_player.rect = 1000, 1000
-            now_x += 3
-            walk_player.rect = now_x, now_y
+            if shift:
+                now_direction = "r"
+                last_player.rect = 1000, 1000
+                now_x += 5
+                run_player.rect = now_x, now_y
+                last_player = run_player
+            else:
+                now_direction = "r"
+                last_player.rect = 1000, 1000
+                now_x += 3
+                walk_player.rect = now_x, now_y
+                last_player = walk_player
         elif motion == "l":
-            now_direction = "l"
-            idle_player.rect = 1000, 1000
-            now_x -= 3
-            walk_player.rect = now_x, now_y
+            if shift:
+                now_direction = "l"
+                last_player.rect = 1000, 1000
+                now_x -= 5
+                run_player.rect = now_x, now_y
+                last_player = run_player
+            else:
+                now_direction = "l"
+                last_player.rect = 1000, 1000
+                now_x -= 3
+                walk_player.rect = now_x, now_y
+                last_player = walk_player
         else:
-            walk_player.rect = 1000, 1000
+            last_player.rect = 1000, 1000
             idle_player.rect = now_x, now_y
+            last_player = idle_player
 
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
@@ -143,6 +169,7 @@ if __name__ == "__main__":
     pygame.init()
     FPS = 50
     motion = "s"
+    shift = False
     now_direction = "r"
     size = WIDTH, HEIGHT = 700, 500
     screen = pygame.display.set_mode(size)
