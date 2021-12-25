@@ -95,6 +95,15 @@ class AnimatedSprite(pygame.sprite.Sprite):
                 self.image = pygame.transform.flip(self.image, True, False)
 
 
+def obrab(motion1):
+    sk = 0
+    if "r" in motion1:
+        sk -= 4
+    if "l" in motion1:
+        sk += 4
+    return sk
+
+
 def main():
     global now_x, now_y, motion, now_direction
     pygame.display.flip()
@@ -104,15 +113,16 @@ def main():
     run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1000, 1000)
     last_player = idle_player
     running = True
+    motion = ""
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a:
-                    motion = "l"
+                    motion += "r"
                 elif event.key == pygame.K_d:
-                    motion = "r"
+                    motion += "l"
                 if pygame.key.get_mods() == 4097:
                     shift = True
                 else:
@@ -122,41 +132,31 @@ def main():
                     print("K_KP_ENTER")
                 if event.key == pygame.K_SPACE:
                     real_time_but = "space"
-                if event.key == pygame.K_a or event.key == pygame.K_d:
-                    motion = "s"
-                if 4097 not in pygame.key.get_pressed():
+                if event.key == pygame.K_a:
+                    motion = motion.replace("r", "")
+                if event.key == pygame.K_d:
+                    motion = motion.replace("l", "")
+                if pygame.key.get_mods() != 4097:
                     shift = False
-        if motion == "r":
-            if shift:
-                now_direction = "r"
-                last_player.rect = 1000, 1000
-                now_x += 5
-                run_player.rect = now_x, now_y
-                last_player = run_player
-            else:
-                now_direction = "r"
-                last_player.rect = 1000, 1000
-                now_x += 3
-                walk_player.rect = now_x, now_y
-                last_player = walk_player
-        elif motion == "l":
-            if shift:
-                now_direction = "l"
-                last_player.rect = 1000, 1000
-                now_x -= 5
-                run_player.rect = now_x, now_y
-                last_player = run_player
-            else:
-                now_direction = "l"
-                last_player.rect = 1000, 1000
-                now_x -= 3
-                walk_player.rect = now_x, now_y
-                last_player = walk_player
-        else:
+        motion_chisel = obrab(motion)
+        if motion_chisel == 0:
             last_player.rect = 1000, 1000
             idle_player.rect = now_x, now_y
             last_player = idle_player
-
+        else:
+            last_player.rect = 1000, 1000
+            if shift:
+                now_x += motion_chisel * 1.5
+                run_player.rect = now_x, now_y
+                last_player = run_player
+            else:
+                now_x += motion_chisel
+                walk_player.rect = now_x, now_y
+                last_player = walk_player
+            if motion_chisel > 0:
+                now_direction = "r"
+            else:
+                now_direction = "l"
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
         all_sprites.update()
@@ -168,7 +168,6 @@ def main():
 if __name__ == "__main__":
     pygame.init()
     FPS = 50
-    motion = "s"
     shift = False
     now_direction = "r"
     size = WIDTH, HEIGHT = 700, 500
