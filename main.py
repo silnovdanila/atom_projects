@@ -58,18 +58,8 @@ def start_screen():
         clock.tick(FPS)
 
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        super().__init__(all_sprites)
-        self.x = x
-        self.y = y
-
-    def update(self):
-        self.rect = self.rect.move(self.x, self.y)
-
-
 class AnimatedSprite(pygame.sprite.Sprite):
-    def __init__(self, sheet, columns, rows, x, y):
+    def __init__(self, sheet, columns, rows, x, y, surface):
         super().__init__(all_sprites)
         self.frames = []
         self.cut_sheet(sheet, columns, rows)
@@ -77,6 +67,7 @@ class AnimatedSprite(pygame.sprite.Sprite):
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
         self.schet = 0
+        self.surf = surface
 
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns, sheet.get_height() // rows)
@@ -93,24 +84,54 @@ class AnimatedSprite(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(self.frames[self.cur_frame], (100, 100))
             if now_direction == "l":
                 self.image = pygame.transform.flip(self.image, True, False)
+        self.image.blit(self.surf, self.rect)
 
 
 def obrab(motion1):
     sk = 0
     if "r" in motion1:
-        sk -= 4
+        sk -= 3
     if "l" in motion1:
-        sk += 4
+        sk += 3
     return sk
+
+
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(tiles_group, all_sprites)
+        self.image = tile_images[tile_type]
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
+        self.image = pygame.transform.scale(self.image, (tile_width, tile_height))
+
+
+def generate_level(level):
+    x, y = None, None
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '.':
+                Tile('empty', x, y)
+            elif level[y][x] == '#':
+                Tile('wall', x, y)
+            elif level[y][x] == '@':
+                Tile('empty', x, y)
+    return  x, y
+
+def load_level(filename):
+    filename = "data/" + filename
+    with open(filename, 'r') as mapFile:
+        level_map = [line.strip() for line in mapFile]
+    max_width = max(map(len, level_map))
+    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
 
 def main():
     global now_x, now_y, motion, now_direction
     pygame.display.flip()
     now_x, now_y = 50, 50
-    idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y)
-    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1000, 1000)
-    run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1000, 1000)
+    idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y, surf)
+    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1000, 1000, surf)
+    run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1000, 1000, surf)
     last_player = idle_player
     running = True
     motion = ""
@@ -146,7 +167,7 @@ def main():
         else:
             last_player.rect = 1000, 1000
             if shift:
-                now_x += motion_chisel * 1.5
+                now_x += motion_chisel * 2
                 run_player.rect = now_x, now_y
                 last_player = run_player
             else:
@@ -157,6 +178,7 @@ def main():
                 now_direction = "r"
             else:
                 now_direction = "l"
+        surf.blit(screen, (0, 0))
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
         all_sprites.update()
@@ -167,15 +189,21 @@ def main():
 
 if __name__ == "__main__":
     pygame.init()
-    FPS = 50
     shift = False
     now_direction = "r"
-    size = WIDTH, HEIGHT = 700, 500
+    size = WIDTH, HEIGHT = 1020, 700
     screen = pygame.display.set_mode(size)
+    surf = pygame.Surface((WIDTH, HEIGHT))
     pygame.display.set_caption("The tale of chelik")
     clock = pygame.time.Clock()
     all_sprites = pygame.sprite.Group()
     tiles_group = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
+    tile_images = {'wall': load_image('box.png'),
+    'empty': load_image('wall.png')}
+    tile_width, tile_height = WIDTH / 16, HEIGHT / 8
+    FPS = 50
+    level_map = load_level('map1.txt')
+    level_x, level_y = generate_level(level_map)
     start_screen()
     main()
