@@ -59,7 +59,7 @@ def start_screen():
 
 
 class AnimatedSprite(pygame.sprite.Sprite):
-    def __init__(self, sheet, columns, rows, x, y, surface):
+    def __init__(self, sheet, columns, rows, x, y):
         super().__init__(all_sprites)
         self.frames = []
         self.cut_sheet(sheet, columns, rows)
@@ -67,7 +67,6 @@ class AnimatedSprite(pygame.sprite.Sprite):
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
         self.schet = 0
-        self.surf = surface
 
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns, sheet.get_height() // rows)
@@ -84,7 +83,6 @@ class AnimatedSprite(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(self.frames[self.cur_frame], (100, 100))
             if now_direction == "l":
                 self.image = pygame.transform.flip(self.image, True, False)
-        self.image.blit(self.surf, self.rect)
 
 
 def obrab(motion1):
@@ -115,7 +113,9 @@ def generate_level(level):
                 Tile('wall', x, y)
             elif level[y][x] == '@':
                 Tile('empty', x, y)
-    return  x, y
+            elif level[y][x] == 'w':
+                Tile('window', x, y)
+    return x, y
 
 def load_level(filename):
     filename = "data/" + filename
@@ -129,12 +129,14 @@ def main():
     global now_x, now_y, motion, now_direction
     pygame.display.flip()
     now_x, now_y = 50, 50
-    idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y, surf)
-    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1000, 1000, surf)
-    run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1000, 1000, surf)
+    idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y)
+    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200, 1200)
+    run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200, 1200)
+    jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump.png"), 6, 1, 1200, 1200)
     last_player = idle_player
     running = True
     motion = ""
+    jump_sk, sk_padeniya = 0, 0
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -144,6 +146,8 @@ def main():
                     motion += "r"
                 elif event.key == pygame.K_d:
                     motion += "l"
+                if event.key == pygame.K_SPACE:
+                    jump_sk += 35
                 if pygame.key.get_mods() == 4097:
                     shift = True
                 else:
@@ -151,34 +155,46 @@ def main():
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_KP_ENTER:
                     print("K_KP_ENTER")
-                if event.key == pygame.K_SPACE:
-                    real_time_but = "space"
                 if event.key == pygame.K_a:
                     motion = motion.replace("r", "")
                 if event.key == pygame.K_d:
                     motion = motion.replace("l", "")
                 if pygame.key.get_mods() != 4097:
                     shift = False
-        motion_chisel = obrab(motion)
-        if motion_chisel == 0:
-            last_player.rect = 1000, 1000
-            idle_player.rect = now_x, now_y
-            last_player = idle_player
+        if jump_sk != 0:
+            now_y -= jump_sk
+            jump_sk -= 1
+            last_player.rect = 1200, 1200
+            jump_player.rect = now_x, now_y
+            last_player = jump_player
         else:
+            motion_chisel = obrab(motion)
+            if motion_chisel == 0:
+                last_player.rect = 1000, 1000
+                idle_player.rect = now_x, now_y
+                last_player = idle_player
+            else:
+                last_player.rect = 1000, 1000
+                if shift:
+                    now_x += motion_chisel * 2
+                    run_player.rect = now_x, now_y
+                    last_player = run_player
+                else:
+                    now_x += motion_chisel
+                    walk_player.rect = now_x, now_y
+                    last_player = walk_player
+                if motion_chisel > 0:
+                    now_direction = "r"
+                else:
+                    now_direction = "l"
+        if (now_y + 100) < 700:
+            now_y = now_y + sk_padeniya
+            sk_padeniya += 1
             last_player.rect = 1000, 1000
-            if shift:
-                now_x += motion_chisel * 2
-                run_player.rect = now_x, now_y
-                last_player = run_player
-            else:
-                now_x += motion_chisel
-                walk_player.rect = now_x, now_y
-                last_player = walk_player
-            if motion_chisel > 0:
-                now_direction = "r"
-            else:
-                now_direction = "l"
-        surf.blit(screen, (0, 0))
+            jump_player.rect = now_x, now_y
+            last_player = jump_player
+        if (now_y + 100) >= 700:
+            sk_padeniya = 1
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
         all_sprites.update()
@@ -193,15 +209,14 @@ if __name__ == "__main__":
     now_direction = "r"
     size = WIDTH, HEIGHT = 1020, 700
     screen = pygame.display.set_mode(size)
-    surf = pygame.Surface((WIDTH, HEIGHT))
     pygame.display.set_caption("The tale of chelik")
     clock = pygame.time.Clock()
     all_sprites = pygame.sprite.Group()
     tiles_group = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
     tile_images = {'wall': load_image('box.png'),
-    'empty': load_image('wall.png')}
-    tile_width, tile_height = WIDTH / 16, HEIGHT / 8
+    'empty': load_image('wall.png'), 'window': load_image("window.png")}
+    tile_width, tile_height = WIDTH / 16, HEIGHT / 13
     FPS = 50
     level_map = load_level('map1.txt')
     level_x, level_y = generate_level(level_map)
