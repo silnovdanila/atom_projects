@@ -32,7 +32,7 @@ def start_screen():
                   "лишь любым способом пройти",
                   "от левого нижнего до правого нижнего угла.",
                   "Постарайтесь пройти как можно больше уровней.",
-                  "Удачи Chelick."]
+                  "Удачи тебе, Chelick."]
 
     fon = pygame.transform.scale(load_image('fon.png'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
@@ -147,7 +147,8 @@ def main():
                 elif event.key == pygame.K_d:
                     motion += "l"
                 if event.key == pygame.K_SPACE:
-                    jump_sk += 35
+                    if (now_y + 101) > 700:
+                        jump_sk += 35
                 if pygame.key.get_mods() == 4097:
                     shift = True
                 else:
@@ -167,27 +168,28 @@ def main():
             last_player.rect = 1200, 1200
             jump_player.rect = now_x, now_y
             last_player = jump_player
+        motion_chisel = obrab(motion)
+        if motion_chisel == 0:
+            last_player.rect = 1000, 1000
+            idle_player.rect = now_x, now_y
+            last_player = idle_player
         else:
-            motion_chisel = obrab(motion)
-            if motion_chisel == 0:
-                last_player.rect = 1000, 1000
-                idle_player.rect = now_x, now_y
-                last_player = idle_player
+            last_player.rect = 1000, 1000
+            if shift:
+                now_x += motion_chisel * 2
+                run_player.rect = now_x, now_y
+                last_player = run_player
             else:
-                last_player.rect = 1000, 1000
-                if shift:
-                    now_x += motion_chisel * 2
-                    run_player.rect = now_x, now_y
-                    last_player = run_player
-                else:
-                    now_x += motion_chisel
-                    walk_player.rect = now_x, now_y
-                    last_player = walk_player
-                if motion_chisel > 0:
-                    now_direction = "r"
-                else:
-                    now_direction = "l"
+                now_x += motion_chisel
+                walk_player.rect = now_x, now_y
+                last_player = walk_player
+            if motion_chisel > 0:
+                now_direction = "r"
+            else:
+                now_direction = "l"
         if (now_y + 100) < 700:
+            if (700 - (now_y + 100)) < sk_padeniya:
+                sk_padeniya = 700 - (now_y + 100)
             now_y = now_y + sk_padeniya
             sk_padeniya += 1
             last_player.rect = 1000, 1000
