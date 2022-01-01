@@ -148,6 +148,7 @@ def main():
                     motion += "l"
                 if event.key == pygame.K_SPACE:
                     if (now_y + 101) > 700:
+                        jump_sound.play()
                         jump_sk += 35
                 if pygame.key.get_mods() == 4097:
                     shift = True
@@ -207,6 +208,7 @@ def main():
 
 if __name__ == "__main__":
     pygame.init()
+    pygame.mixer.init()
     shift = False
     now_direction = "r"
     size = WIDTH, HEIGHT = 1020, 700
@@ -223,4 +225,7 @@ if __name__ == "__main__":
     level_map = load_level('map1.txt')
     level_x, level_y = generate_level(level_map)
     start_screen()
+    misic = pygame.mixer.Sound("fon_music2.wav")
+    misic.play(loops=1000)
+    jump_sound = pygame.mixer.Sound("jump_sound.wav")
     main()
