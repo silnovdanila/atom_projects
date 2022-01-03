@@ -80,7 +80,7 @@ class AnimatedSprite(pygame.sprite.Sprite):
         if pygame.time.get_ticks() / 1000 > self.schet * 0.15:
             self.schet += 1
             self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-            self.image = pygame.transform.scale(self.frames[self.cur_frame], (100, 100))
+            self.image = pygame.transform.scale(self.frames[self.cur_frame], (70, 70))
             if now_direction == "l":
                 self.image = pygame.transform.flip(self.image, True, False)
 
@@ -105,17 +105,19 @@ class Tile(pygame.sprite.Sprite):
 
 def generate_level(level):
     x, y = None, None
+    sp = []
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '.':
                 Tile('empty', x, y)
             elif level[y][x] == '#':
+                sp.append((x + 1, y + 1))
                 Tile('wall', x, y)
             elif level[y][x] == '@':
                 Tile('empty', x, y)
             elif level[y][x] == 'w':
                 Tile('window', x, y)
-    return x, y
+    return x, y, sp
 
 def load_level(filename):
     filename = "data/" + filename
@@ -124,11 +126,25 @@ def load_level(filename):
     max_width = max(map(len, level_map))
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
+def peredel_xy(koord, chislo):
+    if koord % chislo == 0:
+        return koord // chislo
+    return (koord // chislo + 1)
+
+def canPstay(x, y):
+    if ((peredel_xy(x, tile_width)), (peredel_xy(y, tile_height))) in list_of_xys:
+        return True
+    return False
+
+def isPontheGround(x, y):
+    if canPstay(x + 15, y + 71) or canPstay(x + 55, y + 70):
+        return True
+    return False
 
 def main():
     global now_x, now_y, motion, now_direction
     pygame.display.flip()
-    now_x, now_y = 50, 50
+    now_x, now_y = 500, 200
     idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y)
     walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200, 1200)
     run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200, 1200)
@@ -147,9 +163,9 @@ def main():
                 elif event.key == pygame.K_d:
                     motion += "l"
                 if event.key == pygame.K_SPACE:
-                    if (now_y + 101) > 700:
+                    if isPontheGround(now_x, now_y):
                         jump_sound.play()
-                        jump_sk += 35
+                        jump_sk += 25
                 if pygame.key.get_mods() == 4097:
                     shift = True
                 else:
@@ -164,12 +180,21 @@ def main():
                 if pygame.key.get_mods() != 4097:
                     shift = False
         if jump_sk != 0:
-            now_y -= jump_sk
-            jump_sk -= 1
-            last_player.rect = 1200, 1200
-            jump_player.rect = now_x, now_y
-            last_player = jump_player
+            if canPstay(now_x + 16, now_y - 1) or canPstay(now_x + 54, now_y - 1) or canPstay(now_x + 35, now_y - 1):
+                jump_sk = 0
+            else:
+                now_y -= jump_sk
+                jump_sk -= 1
+                last_player.rect = 1200, 1200
+                jump_player.rect = now_x, now_y
+                last_player = jump_player
         motion_chisel = obrab(motion)
+        if canPstay(now_x + 14, now_y) or canPstay(now_x + 14, now_y + 35) or canPstay(now_x + 14, now_y - 70):
+            if motion_chisel < 0:
+                motion_chisel = 0
+        if canPstay(now_x + 56, now_y) or canPstay(now_x + 56, now_y + 35) or canPstay(now_x + 56, now_y - 70):
+            if motion_chisel > 0:
+                motion_chisel = 0
         if motion_chisel == 0:
             last_player.rect = 1000, 1000
             idle_player.rect = now_x, now_y
@@ -188,15 +213,17 @@ def main():
                 now_direction = "r"
             else:
                 now_direction = "l"
-        if (now_y + 100) < 700:
+        if not isPontheGround(now_x, now_y) and jump_sk <= 0:
+            '''
             if (700 - (now_y + 100)) < sk_padeniya:
                 sk_padeniya = 700 - (now_y + 100)
+                '''
             now_y = now_y + sk_padeniya
             sk_padeniya += 1
             last_player.rect = 1000, 1000
             jump_player.rect = now_x, now_y
             last_player = jump_player
-        if (now_y + 100) >= 700:
+        if isPontheGround(now_x, now_y):
             sk_padeniya = 1
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
@@ -223,7 +250,7 @@ if __name__ == "__main__":
     tile_width, tile_height = WIDTH / 16, HEIGHT / 13
     FPS = 50
     level_map = load_level('map1.txt')
-    level_x, level_y = generate_level(level_map)
+    level_x, level_y, list_of_xys = generate_level(level_map)
     start_screen()
     misic = pygame.mixer.Sound("fon_music2.wav")
     misic.play(loops=1000)
