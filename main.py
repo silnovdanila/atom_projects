@@ -46,15 +46,23 @@ def start_screen():
         intro_rect.x = 10
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
-
+    quit_button = pygame.draw.rect(screen,(244,0,0),(800, 600, 100, 50))
+    ext_text = font.render("Выйти", 1, pygame.Color('black'))
+    screen.blit(ext_text, (817, 614))
     while True:
         for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if pygame.mouse.get_pos() >= (800, 600):
+                    if pygame.mouse.get_pos() <= (900, 650):
+                        pygame.quit();
             if event.type == pygame.QUIT:
                 terminate()
-            elif event.type == pygame.KEYDOWN or \
-                    event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.KEYDOWN:
                 return
-        pygame.display.flip()
+        try:
+            pygame.display.flip()
+        except pygame.error:
+            pass
         clock.tick(FPS)
 
 
@@ -148,7 +156,7 @@ def main():
     idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y)
     walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200, 1200)
     run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200, 1200)
-    jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump.png"), 6, 1, 1200, 1200)
+    jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1, 1200, 1200)
     last_player = idle_player
     running = True
     motion = ""
@@ -196,28 +204,34 @@ def main():
             if motion_chisel > 0:
                 motion_chisel = 0
         if motion_chisel == 0:
-            last_player.rect = 1000, 1000
-            idle_player.rect = now_x, now_y
-            last_player = idle_player
+            if isPontheGround(now_x, now_y):
+                last_player.rect = 1000, 1000
+                idle_player.rect = now_x, now_y
+                last_player = idle_player
         else:
-            last_player.rect = 1000, 1000
             if shift:
-                now_x += motion_chisel * 2
-                run_player.rect = now_x, now_y
-                last_player = run_player
+                if isPontheGround(now_x, now_y):
+                    last_player.rect = 1000, 1000
+                    now_x += motion_chisel * 2
+                    run_player.rect = now_x, now_y
+                    last_player = run_player
+                else:
+                    now_x += motion_chisel * 2
+                    last_player.rect = now_x, now_y
             else:
-                now_x += motion_chisel
-                walk_player.rect = now_x, now_y
-                last_player = walk_player
+                if isPontheGround(now_x, now_y):
+                    last_player.rect = 1000, 1000
+                    now_x += motion_chisel
+                    walk_player.rect = now_x, now_y
+                    last_player = walk_player
+                else:
+                    now_x += motion_chisel
+                    last_player.rect = now_x, now_y
             if motion_chisel > 0:
                 now_direction = "r"
             else:
                 now_direction = "l"
         if not isPontheGround(now_x, now_y) and jump_sk <= 0:
-            '''
-            if (700 - (now_y + 100)) < sk_padeniya:
-                sk_padeniya = 700 - (now_y + 100)
-                '''
             now_y = now_y + sk_padeniya
             sk_padeniya += 1
             last_player.rect = 1000, 1000
@@ -225,6 +239,18 @@ def main():
             last_player = jump_player
         if isPontheGround(now_x, now_y):
             sk_padeniya = 1
+        while canPstay(now_x + 35, now_y + 70):
+            now_y -= 1
+            last_player.rect = now_x, now_y
+        while canPstay(now_x + 15, now_y + 35):
+            now_x = now_x + 1
+            last_player.rect = now_x, now_y
+        while canPstay(now_x + 55, now_y + 35):
+            now_x = now_x - 1
+            last_player.rect = now_x, now_y
+        while canPstay(now_x + 35, now_y):
+            now_y += 1
+            last_player.rect = now_x, now_y
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
         all_sprites.update()
@@ -251,8 +277,12 @@ if __name__ == "__main__":
     FPS = 50
     level_map = load_level('map1.txt')
     level_x, level_y, list_of_xys = generate_level(level_map)
-    start_screen()
     misic = pygame.mixer.Sound("fon_music2.wav")
     misic.play(loops=1000)
     jump_sound = pygame.mixer.Sound("jump_sound.wav")
+    try:
+        start_screen()
+    except pygame.error:
+        print("Ну и зачем ты заходил?")
+        exit(0)
     main()
