@@ -160,7 +160,7 @@ def main():
     last_player = idle_player
     running = True
     motion = ""
-    jump_sk, sk_padeniya = 0, 0
+    jump_sk, sk_padeniya, kol_vo_prijkov = 0, 0, 0
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -171,9 +171,11 @@ def main():
                 elif event.key == pygame.K_d:
                     motion += "l"
                 if event.key == pygame.K_SPACE:
-                    if isPontheGround(now_x, now_y):
+                    if isPontheGround(now_x, now_y) or kol_vo_prijkov < 2:
                         jump_sound.play()
-                        jump_sk += 25
+                        kol_vo_prijkov += 1
+                        sk_padeniya = 1
+                        jump_sk = 18
                 if pygame.key.get_mods() == 4097:
                     shift = True
                 else:
@@ -197,12 +199,10 @@ def main():
                 jump_player.rect = now_x, now_y
                 last_player = jump_player
         motion_chisel = obrab(motion)
-        if canPstay(now_x + 14, now_y) or canPstay(now_x + 14, now_y + 35) or canPstay(now_x + 14, now_y - 70):
-            if motion_chisel < 0:
-                motion_chisel = 0
-        if canPstay(now_x + 56, now_y) or canPstay(now_x + 56, now_y + 35) or canPstay(now_x + 56, now_y - 70):
-            if motion_chisel > 0:
-                motion_chisel = 0
+        if canPstay(now_x + 56, now_y + 35) and motion_chisel > 0:
+            motion_chisel = 0
+        if canPstay(now_x + 14, now_y + 35) and motion_chisel < 0:
+            motion_chisel = 0
         if motion_chisel == 0:
             if isPontheGround(now_x, now_y):
                 last_player.rect = 1000, 1000
@@ -239,6 +239,7 @@ def main():
             last_player = jump_player
         if isPontheGround(now_x, now_y):
             sk_padeniya = 1
+            kol_vo_prijkov = 0
         while canPstay(now_x + 35, now_y + 70):
             now_y -= 1
             last_player.rect = now_x, now_y
@@ -265,24 +266,25 @@ if __name__ == "__main__":
     shift = False
     now_direction = "r"
     size = WIDTH, HEIGHT = 1020, 700
+    FPS = 50
     screen = pygame.display.set_mode(size)
     pygame.display.set_caption("The tale of chelik")
     clock = pygame.time.Clock()
     all_sprites = pygame.sprite.Group()
     tiles_group = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
-    tile_images = {'wall': load_image('box.png'),
-    'empty': load_image('wall.png'), 'window': load_image("window.png")}
-    tile_width, tile_height = WIDTH / 16, HEIGHT / 13
-    FPS = 50
-    level_map = load_level('map1.txt')
-    level_x, level_y, list_of_xys = generate_level(level_map)
-    misic = pygame.mixer.Sound("fon_music2.wav")
-    misic.play(loops=1000)
-    jump_sound = pygame.mixer.Sound("jump_sound.wav")
     try:
         start_screen()
     except pygame.error:
         print("Ну и зачем ты заходил?")
         exit(0)
+    screen = pygame.display.set_mode(size)
+    tile_images = {'wall': load_image('box.png'),
+    'empty': load_image('wall.png'), 'window': load_image("window.png")}
+    tile_width, tile_height = WIDTH // 16, HEIGHT // 13
+    level_map = load_level('map1.txt')
+    level_x, level_y, list_of_xys = generate_level(level_map)
+    misic = pygame.mixer.Sound("fon_music2.wav")
+    misic.play(loops=1000)
+    jump_sound = pygame.mixer.Sound("jump_sound.wav")
     main()
