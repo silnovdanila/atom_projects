@@ -46,7 +46,7 @@ def start_screen():
         intro_rect.x = 10
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
-    quit_button = pygame.draw.rect(screen,(244,0,0),(800, 600, 100, 50))
+    quit_button = pygame.draw.rect(screen, (244, 0, 0), (800, 600, 100, 50))
     ext_text = font.render("Выйти", 1, pygame.Color('black'))
     screen.blit(ext_text, (817, 614))
     while True:
@@ -119,13 +119,14 @@ def generate_level(level):
             if level[y][x] == '.':
                 Tile('empty', x, y)
             elif level[y][x] == '#':
-                sp.append((x + 1, y + 1))
+                sp.append((x, y))
                 Tile('wall', x, y)
             elif level[y][x] == '@':
                 Tile('empty', x, y)
             elif level[y][x] == 'w':
                 Tile('window', x, y)
     return x, y, sp
+
 
 def load_level(filename):
     filename = "data/" + filename
@@ -134,20 +135,24 @@ def load_level(filename):
     max_width = max(map(len, level_map))
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
+
 def peredel_xy(koord, chislo):
     if koord % chislo == 0:
-        return koord // chislo
-    return (koord // chislo + 1)
+        return koord // chislo - 1
+    return (koord // chislo)
+
 
 def canPstay(x, y):
     if ((peredel_xy(x, tile_width)), (peredel_xy(y, tile_height))) in list_of_xys:
         return True
     return False
 
+
 def isPontheGround(x, y):
-    if canPstay(x + 15, y + 71) or canPstay(x + 55, y + 70):
+    if canPstay(x + 15, y + 71) or canPstay(x + 55, y + 71):
         return True
     return False
+
 
 def main():
     global now_x, now_y, motion, now_direction
@@ -161,6 +166,8 @@ def main():
     running = True
     motion = ""
     jump_sk, sk_padeniya, kol_vo_prijkov = 0, 0, 0
+    f_perehoda = False
+    now_level = 0
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -171,8 +178,11 @@ def main():
                 elif event.key == pygame.K_d:
                     motion += "l"
                 if event.key == pygame.K_SPACE:
-                    if isPontheGround(now_x, now_y) or kol_vo_prijkov < 2:
+                    x_onmap = now_x + 1020 * now_level
+                    if isPontheGround(x_onmap, now_y):
                         jump_sound.play()
+                        jump_sk = 18
+                    if not isPontheGround(x_onmap, now_y) and kol_vo_prijkov < 2:
                         kol_vo_prijkov += 1
                         sk_padeniya = 1
                         jump_sk = 18
@@ -189,8 +199,10 @@ def main():
                     motion = motion.replace("l", "")
                 if pygame.key.get_mods() != 4097:
                     shift = False
+        x_onmap = now_x + 1020 * now_level
         if jump_sk != 0:
-            if canPstay(now_x + 16, now_y - 1) or canPstay(now_x + 54, now_y - 1) or canPstay(now_x + 35, now_y - 1):
+            if canPstay(x_onmap + 16, now_y - 1) or canPstay(x_onmap + 54, now_y - 1) or \
+                                                    canPstay(x_onmap + 35, now_y - 1):
                 jump_sk = 0
             else:
                 now_y -= jump_sk
@@ -198,19 +210,21 @@ def main():
                 last_player.rect = 1200, 1200
                 jump_player.rect = now_x, now_y
                 last_player = jump_player
+        x_onmap = now_x + 1020 * now_level
         motion_chisel = obrab(motion)
-        if canPstay(now_x + 56, now_y + 35) and motion_chisel > 0:
+        if canPstay(x_onmap + 56, now_y + 35) and motion_chisel > 0:
             motion_chisel = 0
-        if canPstay(now_x + 14, now_y + 35) and motion_chisel < 0:
+        if canPstay(x_onmap + 14, now_y + 35) and motion_chisel < 0:
             motion_chisel = 0
         if motion_chisel == 0:
-            if isPontheGround(now_x, now_y):
+            if isPontheGround(x_onmap, now_y):
                 last_player.rect = 1000, 1000
                 idle_player.rect = now_x, now_y
                 last_player = idle_player
         else:
+            x_onmap = now_x + 1020 * now_level
             if shift:
-                if isPontheGround(now_x, now_y):
+                if isPontheGround(x_onmap, now_y):
                     last_player.rect = 1000, 1000
                     now_x += motion_chisel * 2
                     run_player.rect = now_x, now_y
@@ -219,7 +233,7 @@ def main():
                     now_x += motion_chisel * 2
                     last_player.rect = now_x, now_y
             else:
-                if isPontheGround(now_x, now_y):
+                if isPontheGround(x_onmap, now_y):
                     last_player.rect = 1000, 1000
                     now_x += motion_chisel
                     walk_player.rect = now_x, now_y
@@ -231,27 +245,49 @@ def main():
                 now_direction = "r"
             else:
                 now_direction = "l"
-        if not isPontheGround(now_x, now_y) and jump_sk <= 0:
+        x_onmap = now_x + 1020 * now_level
+        if not isPontheGround(x_onmap, now_y) and jump_sk <= 0:
             now_y = now_y + sk_padeniya
             sk_padeniya += 1
             last_player.rect = 1000, 1000
             jump_player.rect = now_x, now_y
             last_player = jump_player
-        if isPontheGround(now_x, now_y):
-            sk_padeniya = 1
-            kol_vo_prijkov = 0
-        while canPstay(now_x + 35, now_y + 70):
+        x_onmap = now_x + 1020 * now_level
+        while canPstay(x_onmap + 35, now_y + 70):
             now_y -= 1
             last_player.rect = now_x, now_y
-        while canPstay(now_x + 15, now_y + 35):
-            now_x = now_x + 1
-            last_player.rect = now_x, now_y
-        while canPstay(now_x + 55, now_y + 35):
+        x_onmap = now_x + 1020 * now_level
+        while canPstay(x_onmap + 55, now_y + 35):
             now_x = now_x - 1
             last_player.rect = now_x, now_y
-        while canPstay(now_x + 35, now_y):
+            x_onmap = now_x + 1020 * now_level
+        x_onmap = now_x + 1020 * now_level
+        while canPstay(x_onmap + 15, now_y + 35):
+            now_x = now_x + 1
+            last_player.rect = now_x, now_y
+            x_onmap = now_x + 1020 * now_level
+        while canPstay(x_onmap + 35, now_y):
             now_y += 1
             last_player.rect = now_x, now_y
+        if isPontheGround(x_onmap, now_y):
+            sk_padeniya = 1
+            kol_vo_prijkov = 1
+        x_onmap = now_x + 1020 * now_level
+        if not now_level * tile_width * 16 < x_onmap < (now_level + 1) * tile_width * 16:
+            if (now_level + 1) * tile_width * 16 > x_onmap:
+                for sprite in tiles_group:
+                    sprite.rect = sprite.rect[0] + 1020, sprite.rect[1]
+                now_x = 950
+                last_player.rect = now_x, now_y
+                now_level -= 1
+                x_onmap = now_x + 1020 * now_level
+            else:
+                for sprite in tiles_group:
+                    sprite.rect = sprite.rect[0] - 1020, sprite.rect[1]
+                now_x = 30
+                last_player.rect = now_x, now_y
+                now_level += 1
+                x_onmap = now_x + 1020 * now_level
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
         all_sprites.update()
@@ -262,6 +298,7 @@ def main():
 
 if __name__ == "__main__":
     pygame.init()
+    pygame.display.init()
     pygame.mixer.init()
     shift = False
     now_direction = "r"
@@ -280,8 +317,8 @@ if __name__ == "__main__":
         exit(0)
     screen = pygame.display.set_mode(size)
     tile_images = {'wall': load_image('box.png'),
-    'empty': load_image('wall.png'), 'window': load_image("window.png")}
-    tile_width, tile_height = WIDTH // 16, HEIGHT // 13
+                   'empty': load_image('wall.png'), 'window': load_image("window.png")}
+    tile_width, tile_height = WIDTH / 16, HEIGHT / 13
     level_map = load_level('map1.txt')
     level_x, level_y, list_of_xys = generate_level(level_map)
     misic = pygame.mixer.Sound("fon_music2.wav")
