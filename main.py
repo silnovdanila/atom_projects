@@ -167,7 +167,7 @@ def main():
     motion = ""
     jump_sk, sk_padeniya, kol_vo_prijkov = 0, 0, 0
     f_perehoda = False
-    now_level = 0
+    now_level, now_height = 0, 0
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -178,11 +178,12 @@ def main():
                 elif event.key == pygame.K_d:
                     motion += "l"
                 if event.key == pygame.K_SPACE:
-                    x_onmap = now_x + 1020 * now_level
-                    if isPontheGround(x_onmap, now_y):
+                    x_onmap = now_x + now_level * tile_width * 16
+                    y_onmap = now_y + now_height * tile_height * 13
+                    if isPontheGround(x_onmap, y_onmap):
                         jump_sound.play()
                         jump_sk = 18
-                    if not isPontheGround(x_onmap, now_y) and kol_vo_prijkov < 2:
+                    if not isPontheGround(x_onmap, y_onmap) and kol_vo_prijkov < 2:
                         kol_vo_prijkov += 1
                         sk_padeniya = 1
                         jump_sk = 18
@@ -199,10 +200,11 @@ def main():
                     motion = motion.replace("l", "")
                 if pygame.key.get_mods() != 4097:
                     shift = False
-        x_onmap = now_x + 1020 * now_level
+        x_onmap = now_x + now_level * tile_width * 16
+        y_onmap = now_y + now_height * tile_height * 13
         if jump_sk != 0:
-            if canPstay(x_onmap + 16, now_y - 1) or canPstay(x_onmap + 54, now_y - 1) or \
-                                                    canPstay(x_onmap + 35, now_y - 1):
+            if canPstay(x_onmap + 16, y_onmap - 1) or canPstay(x_onmap + 54, y_onmap - 1) or \
+                                                    canPstay(x_onmap + 35, y_onmap - 1):
                 jump_sk = 0
             else:
                 now_y -= jump_sk
@@ -210,21 +212,23 @@ def main():
                 last_player.rect = 1200, 1200
                 jump_player.rect = now_x, now_y
                 last_player = jump_player
-        x_onmap = now_x + 1020 * now_level
+        x_onmap = now_x + now_level * tile_width * 16
+        y_onmap = now_y + now_height * tile_height * 13
         motion_chisel = obrab(motion)
-        if canPstay(x_onmap + 56, now_y + 35) and motion_chisel > 0:
+        if (canPstay(x_onmap + 56, y_onmap + 7) or canPstay(x_onmap + 56, y_onmap + 65) or canPstay(x_onmap + 56, y_onmap + 35)) and motion_chisel > 0:
             motion_chisel = 0
-        if canPstay(x_onmap + 14, now_y + 35) and motion_chisel < 0:
+        if (canPstay(x_onmap + 14, y_onmap + 7) or canPstay(x_onmap + 14, y_onmap + 65) or canPstay(x_onmap + 14, y_onmap + 35)) and motion_chisel < 0:
             motion_chisel = 0
         if motion_chisel == 0:
-            if isPontheGround(x_onmap, now_y):
+            if isPontheGround(x_onmap, y_onmap):
                 last_player.rect = 1000, 1000
                 idle_player.rect = now_x, now_y
                 last_player = idle_player
         else:
-            x_onmap = now_x + 1020 * now_level
+            x_onmap = now_x + now_level * tile_width * 16
+            y_onmap = now_y + now_height * tile_height * 13
             if shift:
-                if isPontheGround(x_onmap, now_y):
+                if isPontheGround(x_onmap, y_onmap):
                     last_player.rect = 1000, 1000
                     now_x += motion_chisel * 2
                     run_player.rect = now_x, now_y
@@ -233,7 +237,7 @@ def main():
                     now_x += motion_chisel * 2
                     last_player.rect = now_x, now_y
             else:
-                if isPontheGround(x_onmap, now_y):
+                if isPontheGround(x_onmap, y_onmap):
                     last_player.rect = 1000, 1000
                     now_x += motion_chisel
                     walk_player.rect = now_x, now_y
@@ -245,34 +249,37 @@ def main():
                 now_direction = "r"
             else:
                 now_direction = "l"
-        x_onmap = now_x + 1020 * now_level
-        if not isPontheGround(x_onmap, now_y) and jump_sk <= 0:
+        x_onmap = now_x + now_level * tile_width * 16
+        y_onmap = now_y + now_height * tile_height * 13
+        if not isPontheGround(x_onmap, y_onmap) and jump_sk <= 0:
             now_y = now_y + sk_padeniya
             sk_padeniya += 1
             last_player.rect = 1000, 1000
             jump_player.rect = now_x, now_y
             last_player = jump_player
-        x_onmap = now_x + 1020 * now_level
-        while canPstay(x_onmap + 35, now_y + 70):
+        x_onmap = now_x + now_level * tile_width * 16
+        y_onmap = now_y + now_height * tile_height * 13
+        while canPstay(x_onmap + 35, y_onmap + 70):
             now_y -= 1
             last_player.rect = now_x, now_y
-        x_onmap = now_x + 1020 * now_level
-        while canPstay(x_onmap + 55, now_y + 35):
+            y_onmap = now_y + now_height * tile_height * 13
+        while canPstay(x_onmap + 35, y_onmap):
+            now_y += 1
+            last_player.rect = now_x, now_y
+            y_onmap = now_y + now_height * tile_height * 13
+        while canPstay(x_onmap + 55, y_onmap + 7) or canPstay(x_onmap + 55, y_onmap + 65) or canPstay(x_onmap + 55, y_onmap + 35):
             now_x = now_x - 1
             last_player.rect = now_x, now_y
             x_onmap = now_x + 1020 * now_level
-        x_onmap = now_x + 1020 * now_level
-        while canPstay(x_onmap + 15, now_y + 35):
+        while canPstay(x_onmap + 15, y_onmap + 35) or canPstay(x_onmap + 15, y_onmap + 7) or canPstay(x_onmap + 15, y_onmap + 65):
             now_x = now_x + 1
             last_player.rect = now_x, now_y
             x_onmap = now_x + 1020 * now_level
-        while canPstay(x_onmap + 35, now_y):
-            now_y += 1
-            last_player.rect = now_x, now_y
-        if isPontheGround(x_onmap, now_y):
+        if isPontheGround(x_onmap, y_onmap):
             sk_padeniya = 1
             kol_vo_prijkov = 1
-        x_onmap = now_x + 1020 * now_level
+        x_onmap = now_x + now_level * tile_width * 16
+        y_onmap = now_y + now_height * tile_height * 13
         if not now_level * tile_width * 16 < x_onmap < (now_level + 1) * tile_width * 16:
             if (now_level + 1) * tile_width * 16 > x_onmap:
                 for sprite in tiles_group:
@@ -288,6 +295,21 @@ def main():
                 last_player.rect = now_x, now_y
                 now_level += 1
                 x_onmap = now_x + 1020 * now_level
+        if not now_height * tile_height * 13 < y_onmap < (now_height + 1) * tile_height * 13:
+            if (now_height + 1) * tile_height * 13 > y_onmap:
+                for sprite in tiles_group:
+                    sprite.rect = sprite.rect[0], sprite.rect[1] + 700
+                now_y = 600
+                last_player.rect = now_x, now_y
+                now_height -= 1
+                y_onmap = now_y + 700 * now_height
+            else:
+                for sprite in tiles_group:
+                    sprite.rect = sprite.rect[0], sprite.rect[1] - 700
+                now_y = 100
+                last_player.rect = now_y, now_y
+                now_height += 1
+                y_onmap = now_y + 700 * now_height
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
         all_sprites.update()
