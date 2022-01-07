@@ -74,7 +74,7 @@ class AnimatedSprite(pygame.sprite.Sprite):
         self.cur_frame = 0
         self.image = self.frames[self.cur_frame]
         self.rect = self.rect.move(x, y)
-        self.schet = 0
+        self.scheat = pygame.time.get_ticks() / 1000
 
     def cut_sheet(self, sheet, columns, rows):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns, sheet.get_height() // rows)
@@ -85,12 +85,12 @@ class AnimatedSprite(pygame.sprite.Sprite):
 
     def update(self):
         global now_direction
-        if pygame.time.get_ticks() / 1000 > self.schet * 0.15:
-            self.schet += 1
+        if pygame.time.get_ticks() / 1000 > self.scheat:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames)
             self.image = pygame.transform.scale(self.frames[self.cur_frame], (70, 70))
             if now_direction == "l":
                 self.image = pygame.transform.flip(self.image, True, False)
+            self.scheat = pygame.time.get_ticks() / 1000 + 0.12
 
 
 def obrab(motion1):
@@ -103,29 +103,39 @@ def obrab(motion1):
 
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, tile_type, pos_x, pos_y):
+    def __init__(self, tile_type, pos_x, pos_y, tw, th):
         super().__init__(tiles_group, all_sprites)
         self.image = tile_images[tile_type]
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
-        self.image = pygame.transform.scale(self.image, (tile_width, tile_height))
+        self.image = pygame.transform.scale(self.image, (tw, th))
 
 
 def generate_level(level):
     x, y = None, None
-    sp = []
+    sp, keySP, doorSP = [], [], []
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '.':
-                Tile('empty', x, y)
+                Tile('empty', x, y, tile_width, tile_height)
             elif level[y][x] == '#':
                 sp.append((x, y))
-                Tile('wall', x, y)
-            elif level[y][x] == '@':
-                Tile('empty', x, y)
+                Tile('wall', x, y, tile_width, tile_height)
             elif level[y][x] == 'w':
-                Tile('window', x, y)
-    return x, y, sp
+                Tile('window', x, y, tile_width, tile_height)
+            elif level[y][x] == 'k':
+                Tile('empty', x, y, tile_width, tile_height)
+                Tile('key', x, y, tile_width, tile_height)
+                keySP.append((x, y))
+            elif level[y][x] == 'd' and level[y + 1][x] == 'd':
+                Tile('empty', x, y, tile_width, tile_height)
+                Tile('empty', x, y + 1, tile_width, tile_height)
+                Tile('door', x, y, tile_width, tile_height * 2)
+                doorSP.append((x, y))
+                doorSP.append((x, y + 1))
+                sp.append((x, y))
+                sp.append((x, y + 1))
+    return x, y, sp, keySP, doorSP
 
 
 def load_level(filename):
@@ -153,9 +163,27 @@ def isPontheGround(x, y):
         return True
     return False
 
+def isSthNear(x, y, list):
+    if (peredel_xy(x + 14, tile_width), peredel_xy(y, tile_height)) in list:
+        return True, peredel_xy(x + 14, tile_width), peredel_xy(y, tile_height)
+    elif (peredel_xy(x + 14, tile_width), peredel_xy(y + 35, tile_height)) in list:
+        return True, peredel_xy(x + 14, tile_width), peredel_xy(y + 35, tile_height)
+    elif (peredel_xy(x + 14, tile_width), peredel_xy(y + 71, tile_height)) in list:
+        return True, peredel_xy(x + 14, tile_width), peredel_xy(y + 71, tile_height)
+    elif (peredel_xy(x + 35, tile_width), peredel_xy(y + 71, tile_height)) in list:
+        return True, peredel_xy(x + 35, tile_width), peredel_xy(y + 71, tile_height)
+    elif (peredel_xy(x + 56, tile_width), peredel_xy(y + 71, tile_height)) in list:
+        return True, peredel_xy(x + 56, tile_width), peredel_xy(y + 71, tile_height)
+    elif (peredel_xy(x + 56, tile_width), peredel_xy(y + 35, tile_height)) in list:
+        return True, peredel_xy(x + 56, tile_width), peredel_xy(y + 35, tile_height)
+    elif (peredel_xy(x + 56, tile_width), peredel_xy(y, tile_height)) in list:
+        return True, peredel_xy(x + 56, tile_width), peredel_xy(y, tile_height)
+    elif (peredel_xy(x + 35, tile_width), peredel_xy(y, tile_height)) in list:
+        return True, peredel_xy(x + 35, tile_width), peredel_xy(y, tile_height)
+    return False, -1, -1
 
 def main():
-    global now_x, now_y, motion, now_direction
+    global now_x, now_y, motion, now_direction, listOFkeys
     pygame.display.flip()
     now_x, now_y = 500, 200
     idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y)
@@ -163,6 +191,7 @@ def main():
     run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200, 1200)
     jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1, 1200, 1200)
     last_player = idle_player
+    playerKeys = 0
     running = True
     motion = ""
     jump_sk, sk_padeniya, kol_vo_prijkov = 0, 0, 0
@@ -253,7 +282,8 @@ def main():
         y_onmap = now_y + now_height * tile_height * 13
         if not isPontheGround(x_onmap, y_onmap) and jump_sk <= 0:
             now_y = now_y + sk_padeniya
-            sk_padeniya += 1
+            if sk_padeniya <= 25:
+                sk_padeniya += 1
             last_player.rect = 1000, 1000
             jump_player.rect = now_x, now_y
             last_player = jump_player
@@ -270,46 +300,77 @@ def main():
         while canPstay(x_onmap + 55, y_onmap + 7) or canPstay(x_onmap + 55, y_onmap + 65) or canPstay(x_onmap + 55, y_onmap + 35):
             now_x = now_x - 1
             last_player.rect = now_x, now_y
-            x_onmap = now_x + 1020 * now_level
+            x_onmap = now_x + now_level * tile_width * 16
         while canPstay(x_onmap + 15, y_onmap + 35) or canPstay(x_onmap + 15, y_onmap + 7) or canPstay(x_onmap + 15, y_onmap + 65):
             now_x = now_x + 1
             last_player.rect = now_x, now_y
-            x_onmap = now_x + 1020 * now_level
+            x_onmap = now_x + now_level * tile_width * 16
         if isPontheGround(x_onmap, y_onmap):
             sk_padeniya = 1
             kol_vo_prijkov = 1
         x_onmap = now_x + now_level * tile_width * 16
         y_onmap = now_y + now_height * tile_height * 13
+        key_f, key_x, key_y = isSthNear(x_onmap, y_onmap, listOFkeys)
+        if key_f:
+            key_f = False
+            playerKeys += 1
+            Tile('empty', key_x - now_level * 16, key_y - now_height * 13, tile_width, tile_height)
+            listOFkeys.remove((key_x, key_y))
+            idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, 1200, 1200)
+            walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200, 1200)
+            run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200, 1200)
+            jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1, 1200, 1200)
+        door_f, door_x, door_y = isSthNear(x_onmap, y_onmap, listOfdoors)
+        if door_f:
+            door_f = False
+            if playerKeys > 0:
+                playerKeys -= 1
+                listOfdoors.remove((door_x, door_y))
+                list_of_xys.remove((door_x, door_y))
+                Tile('empty', door_x - now_level * 16, door_y - now_height * 13, tile_width, tile_height)
+                if (door_x, door_y - 1) in listOfdoors:
+                    listOfdoors.remove((door_x, door_y - 1))
+                    list_of_xys.remove((door_x, door_y - 1))
+                    Tile('empty', door_x - now_level * 16, door_y - 1 - now_height * 13, tile_width, tile_height)
+                elif (door_x, door_y + 1) in listOfdoors:
+                    listOfdoors.remove((door_x, door_y + 1))
+                    list_of_xys.remove((door_x, door_y + 1))
+                    Tile('empty', door_x - now_level * 16, door_y + 1 - now_height * 13, tile_width, tile_height)
+                idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, 1200, 1200)
+                walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200, 1200)
+                run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200, 1200)
+                jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1, 1200, 1200)
+                doorOpened.play()
         if not now_level * tile_width * 16 < x_onmap < (now_level + 1) * tile_width * 16:
             if (now_level + 1) * tile_width * 16 > x_onmap:
                 for sprite in tiles_group:
-                    sprite.rect = sprite.rect[0] + 1020, sprite.rect[1]
-                now_x = 950
+                    sprite.rect = sprite.rect[0] + tile_width * 16, sprite.rect[1]
+                now_x = 1100
                 last_player.rect = now_x, now_y
                 now_level -= 1
-                x_onmap = now_x + 1020 * now_level
+                x_onmap = now_x + tile_width * 16 * now_level
             else:
                 for sprite in tiles_group:
-                    sprite.rect = sprite.rect[0] - 1020, sprite.rect[1]
-                now_x = 30
+                    sprite.rect = sprite.rect[0] - tile_width * 16, sprite.rect[1]
+                now_x = 2
                 last_player.rect = now_x, now_y
                 now_level += 1
-                x_onmap = now_x + 1020 * now_level
+                x_onmap = now_x + tile_width * 16 * now_level
         if not now_height * tile_height * 13 < y_onmap < (now_height + 1) * tile_height * 13:
             if (now_height + 1) * tile_height * 13 > y_onmap:
                 for sprite in tiles_group:
-                    sprite.rect = sprite.rect[0], sprite.rect[1] + 700
+                    sprite.rect = sprite.rect[0], sprite.rect[1] + tile_height * 13
                 now_y = 600
                 last_player.rect = now_x, now_y
                 now_height -= 1
-                y_onmap = now_y + 700 * now_height
+                y_onmap = now_y + tile_height * 13 * now_height
             else:
                 for sprite in tiles_group:
-                    sprite.rect = sprite.rect[0], sprite.rect[1] - 700
+                    sprite.rect = sprite.rect[0], sprite.rect[1] - tile_height * 13
                 now_y = 100
                 last_player.rect = now_y, now_y
                 now_height += 1
-                y_onmap = now_y + 700 * now_height
+                y_onmap = now_y + tile_height * 13 * now_height
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
         all_sprites.update()
@@ -324,7 +385,7 @@ if __name__ == "__main__":
     pygame.mixer.init()
     shift = False
     now_direction = "r"
-    size = WIDTH, HEIGHT = 1020, 700
+    size = WIDTH, HEIGHT = 1120, 715
     FPS = 50
     screen = pygame.display.set_mode(size)
     pygame.display.set_caption("The tale of chelik")
@@ -338,12 +399,13 @@ if __name__ == "__main__":
         print("Ну и зачем ты заходил?")
         exit(0)
     screen = pygame.display.set_mode(size)
-    tile_images = {'wall': load_image('box.png'),
-                   'empty': load_image('wall.png'), 'window': load_image("window.png")}
-    tile_width, tile_height = WIDTH / 16, HEIGHT / 13
+    tile_images = {'wall': load_image('box.png'), 'empty': load_image('wall.png'), 'door': load_image("Basic_Door_Pixel.png"),
+                    'window': load_image("window.png"), "key": load_image("key1.png")}
+    tile_width, tile_height = WIDTH // 16, HEIGHT // 13
     level_map = load_level('map1.txt')
-    level_x, level_y, list_of_xys = generate_level(level_map)
+    level_x, level_y, list_of_xys, listOFkeys, listOfdoors = generate_level(level_map)
     misic = pygame.mixer.Sound("fon_music2.wav")
     misic.play(loops=1000)
     jump_sound = pygame.mixer.Sound("jump_sound.wav")
+    doorOpened = pygame.mixer.Sound("doorOpened.wav")
     main()
