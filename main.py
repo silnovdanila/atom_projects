@@ -1,8 +1,8 @@
 import os
+import random
 import sys
 
 import pygame
-import random
 
 
 def load_image(name, colorkey=None):
@@ -507,6 +507,8 @@ if __name__ == "__main__":
     all_sprites = pygame.sprite.Group()
     tiles_group = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
+
+
     class Particle(pygame.sprite.Sprite):
         fire = [load_image("star.png")]
         for scale in (5, 10, 20):
@@ -533,6 +535,8 @@ if __name__ == "__main__":
         numbers = range(-5, 6)
         for _ in range(particle_count):
             Particle(position, random.choice(numbers), random.choice(numbers))
+
+
     try:
         start_screen()
     except pygame.error:
