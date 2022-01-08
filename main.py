@@ -2,6 +2,7 @@ import os
 import sys
 
 import pygame
+import random
 
 
 def load_image(name, colorkey=None):
@@ -203,11 +204,12 @@ def isSthNear(x, y, list):
     return False, -1, -1
 
 
-def death(x, y):
+def death():
     global last_player, diLevels, now_x, now_y, now_level, x_onmap, y_onmap, tiles_group
     global tile_width
     x_onmap, y_onmap = diLevels[now_height][0], diLevels[now_height][1]
     now_x, now_y = diLevels[now_height][2], diLevels[now_height][3]
+    create_particles((now_x, now_y))
     last_player.rect = now_x, now_y
     while not now_level * tile_width * 16 < x_onmap < (now_level + 1) * tile_width * 16:
         if (now_level + 1) * tile_width * 16 > x_onmap:
@@ -409,7 +411,7 @@ def main():
         spike_f, spike_x, spike_y = isSthNear(x_onmap, y_onmap, lOFspikes)
         if spike_f:
             spike_f = False
-            death(now_x, now_y)
+            death()
             all_deaths += 1
         if not now_level * tile_width * 16 < x_onmap < (now_level + 1) * tile_width * 16:
             if (now_level + 1) * tile_width * 16 > x_onmap:
@@ -497,12 +499,40 @@ if __name__ == "__main__":
     now_direction = "r"
     size = WIDTH, HEIGHT = 1120, 715
     FPS = 50
+    gravity = 0.25
+    screen_rect = (0, 0, WIDTH, HEIGHT)
     screen = pygame.display.set_mode(size)
     pygame.display.set_caption("The tale of chelik")
     clock = pygame.time.Clock()
     all_sprites = pygame.sprite.Group()
     tiles_group = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
+    class Particle(pygame.sprite.Sprite):
+        fire = [load_image("star.png")]
+        for scale in (5, 10, 20):
+            fire.append(pygame.transform.scale(fire[0], (scale, scale)))
+
+        def __init__(self, pos, dx, dy):
+            super().__init__(all_sprites)
+            self.image = random.choice(self.fire)
+            self.rect = self.image.get_rect()
+            self.velocity = [dx, dy]
+            self.rect.x, self.rect.y = pos
+            self.gravity = gravity
+
+        def update(self):
+            self.velocity[1] += self.gravity
+            self.rect.x += self.velocity[0]
+            self.rect.y += self.velocity[1]
+            if not self.rect.colliderect(screen_rect):
+                self.kill()
+
+
+    def create_particles(position):
+        particle_count = 20
+        numbers = range(-5, 6)
+        for _ in range(particle_count):
+            Particle(position, random.choice(numbers), random.choice(numbers))
     try:
         start_screen()
     except pygame.error:
