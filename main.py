@@ -66,6 +66,10 @@ def start_screen():
         clock.tick(FPS)
 
 
+def end_screen(d):
+    global all_deaths, screen
+
+
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y, chislo):
         super().__init__(all_sprites)
@@ -131,6 +135,8 @@ def generate_level(level):
                 Tile('wall', x, y, tile_width, tile_height)
             elif level[y][x] == 'w':
                 Tile('window', x, y, tile_width, tile_height)
+            elif level[y][x] == 'y':
+                Tile('sky', x, y, tile_width, tile_height)
             elif level[y][x] == 'k':
                 Tile('empty', x, y, tile_width, tile_height)
                 Tile('key', x, y, tile_width, tile_height)
@@ -176,6 +182,7 @@ def isPontheGround(x, y):
         return True
     return False
 
+
 def isSthNear(x, y, list):
     if (peredel_xy(x + 14, tile_width), peredel_xy(y, tile_height)) in list:
         return True, peredel_xy(x + 14, tile_width), peredel_xy(y, tile_height)
@@ -195,8 +202,10 @@ def isSthNear(x, y, list):
         return True, peredel_xy(x + 35, tile_width), peredel_xy(y, tile_height)
     return False, -1, -1
 
+
 def death(x, y):
-    global last_player, diLevels, now_x, now_y, now_level, x_onmap, y_onmap, tiles_group, tile_width
+    global last_player, diLevels, now_x, now_y, now_level, x_onmap, y_onmap, tiles_group
+    global tile_width
     x_onmap, y_onmap = diLevels[now_height][0], diLevels[now_height][1]
     now_x, now_y = diLevels[now_height][2], diLevels[now_height][3]
     last_player.rect = now_x, now_y
@@ -211,18 +220,24 @@ def death(x, y):
                 sprite.rect = sprite.rect[0] - tile_width * 16, sprite.rect[1]
             last_player.rect = now_x, now_y
             now_level += 1
-    print(now_level * tile_width * 16, x_onmap, (now_level + 1) * tile_width * 16, now_level)
+
 
 def main():
-    global motion, now_direction, listOFkeys, last_player, diLevels, now_height, now_x, now_y, now_level, x_onmap, y_onmap, tiles_group
+    global motion, now_direction, listOFkeys, last_player, diLevels
+    global now_height, now_x, now_y, now_level, x_onmap, y_onmap, tiles_group, all_deaths
     pygame.display.flip()
-    now_x, now_y = 500, 200
-    idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x, now_y, 0.15)
-    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200, 1200, 0.12)
-    run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200, 1200, 0.12)
-    jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1, 1200, 1200, 0.12)
+    diLevels = {0: (630, 550, 630, 550), 1: (3920, 920, 550, 200), 2: (150, 2020, 150, 590),
+                3: (4131, 2624, 771, 479)}
+    now_x, now_y = 630, 550
+    idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, now_x,
+                                 now_y, 0.15)
+    walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200,
+                                 1200, 0.12)
+    run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200,
+                                1200, 0.12)
+    jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1, 1200,
+                                 1200, 0.12)
     last_player = idle_player
-    diLevels = {0: (70, 550, 70, 550), 1: (70, 1200, 70, 550)}
     playerKeys = 0
     running = True
     motion = ""
@@ -234,6 +249,7 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                return False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a:
                     motion += "r"
@@ -255,8 +271,6 @@ def main():
                 else:
                     shift = False
             elif event.type == pygame.KEYUP:
-                if event.key == pygame.K_KP_ENTER:
-                    print("K_KP_ENTER")
                 if event.key == pygame.K_a:
                     motion = motion.replace("r", "")
                 if event.key == pygame.K_d:
@@ -267,7 +281,7 @@ def main():
         y_onmap = now_y + now_height * tile_height * 13
         if jump_sk != 0:
             if canPstay(x_onmap + 16, y_onmap - 1) or canPstay(x_onmap + 54, y_onmap - 1) or \
-                                                    canPstay(x_onmap + 35, y_onmap - 1):
+                    canPstay(x_onmap + 35, y_onmap - 1):
                 jump_sk = 0
             else:
                 now_y -= jump_sk
@@ -280,9 +294,11 @@ def main():
         x_onmap = now_x + now_level * tile_width * 16
         y_onmap = now_y + now_height * tile_height * 13
         motion_chisel = obrab(motion)
-        if (canPstay(x_onmap + 56, y_onmap + 7) or canPstay(x_onmap + 56, y_onmap + 65) or canPstay(x_onmap + 56, y_onmap + 35)) and motion_chisel > 0:
+        if (canPstay(x_onmap + 56, y_onmap + 7) or canPstay(x_onmap + 56, y_onmap + 65) \
+            or canPstay(x_onmap + 56, y_onmap + 35)) and motion_chisel > 0:
             motion_chisel = 0
-        if (canPstay(x_onmap + 14, y_onmap + 7) or canPstay(x_onmap + 14, y_onmap + 65) or canPstay(x_onmap + 14, y_onmap + 35)) and motion_chisel < 0:
+        if (canPstay(x_onmap + 14, y_onmap + 7) or canPstay(x_onmap + 14, y_onmap + 65) \
+            or canPstay(x_onmap + 14, y_onmap + 35)) and motion_chisel < 0:
             motion_chisel = 0
         if motion_chisel == 0:
             if isPontheGround(x_onmap, y_onmap):
@@ -333,11 +349,13 @@ def main():
             now_y += 1
             last_player.rect = now_x, now_y
             y_onmap = now_y + now_height * tile_height * 13
-        while canPstay(x_onmap + 55, y_onmap + 7) or canPstay(x_onmap + 55, y_onmap + 65) or canPstay(x_onmap + 55, y_onmap + 35):
+        while canPstay(x_onmap + 55, y_onmap + 7) or canPstay(x_onmap + 55, y_onmap + 65) \
+                or canPstay(x_onmap + 55, y_onmap + 35):
             now_x = now_x - 1
             last_player.rect = now_x, now_y
             x_onmap = now_x + now_level * tile_width * 16
-        while canPstay(x_onmap + 15, y_onmap + 35) or canPstay(x_onmap + 15, y_onmap + 7) or canPstay(x_onmap + 15, y_onmap + 65):
+        while canPstay(x_onmap + 15, y_onmap + 35) or canPstay(x_onmap + 15, y_onmap + 7) \
+                or canPstay(x_onmap + 15, y_onmap + 65):
             now_x = now_x + 1
             last_player.rect = now_x, now_y
             x_onmap = now_x + now_level * tile_width * 16
@@ -352,10 +370,14 @@ def main():
             playerKeys += 1
             Tile('empty', key_x - now_level * 16, key_y - now_height * 13, tile_width, tile_height)
             listOFkeys.remove((key_x, key_y))
-            idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, 1200, 1200, 0.12)
-            walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200, 1200, 0.12)
-            run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200, 1200, 0.12)
-            jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1, 1200, 1200, 0.12)
+            idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, 1200,
+                                         1200, 0.12)
+            walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200,
+                                         1200, 0.12)
+            run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200,
+                                        1200, 0.12)
+            jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1, 1200,
+                                         1200, 0.12)
         door_f, door_x, door_y = isSthNear(x_onmap, y_onmap, listOfdoors)
         if door_f:
             door_f = False
@@ -363,19 +385,26 @@ def main():
                 playerKeys -= 1
                 listOfdoors.remove((door_x, door_y))
                 list_of_xys.remove((door_x, door_y))
-                Tile('empty', door_x - now_level * 16, door_y - now_height * 13, tile_width, tile_height)
+                Tile('empty', door_x - now_level * 16, door_y - now_height * 13,
+                     tile_width, tile_height)
                 if (door_x, door_y - 1) in listOfdoors:
                     listOfdoors.remove((door_x, door_y - 1))
                     list_of_xys.remove((door_x, door_y - 1))
-                    Tile('empty', door_x - now_level * 16, door_y - 1 - now_height * 13, tile_width, tile_height)
+                    Tile('empty', door_x - now_level * 16, door_y - 1 - now_height * 13,
+                         tile_width, tile_height)
                 elif (door_x, door_y + 1) in listOfdoors:
                     listOfdoors.remove((door_x, door_y + 1))
                     list_of_xys.remove((door_x, door_y + 1))
-                    Tile('empty', door_x - now_level * 16, door_y + 1 - now_height * 13, tile_width, tile_height)
-                idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1, 1200, 1200, 0.12)
-                walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1, 1200, 1200, 0.12)
-                run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200, 1200, 0.12)
-                jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1, 1200, 1200, 0.12)
+                    Tile('empty', door_x - now_level * 16, door_y + 1 - now_height * 13,
+                         tile_width, tile_height)
+                idle_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_idle.png"), 4, 1,
+                                             1200, 1200, 0.12)
+                walk_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_walk.png"), 6, 1,
+                                             1200, 1200, 0.12)
+                run_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_run.png"), 6, 1, 1200,
+                                            1200, 0.12)
+                jump_player = AnimatedSprite(load_image("3 SteamMan\SteamMan_jump1.png"), 4, 1,
+                                             1200, 1200, 0.12)
                 doorOpened.play()
         spike_f, spike_x, spike_y = isSthNear(x_onmap, y_onmap, lOFspikes)
         if spike_f:
@@ -412,12 +441,52 @@ def main():
                 last_player.rect = now_y, now_y
                 now_height += 1
                 y_onmap = now_y + tile_height * 13 * now_height
+        if x_onmap < 0:
+            running = False
         screen.fill(pygame.Color("black"))
         all_sprites.draw(screen)
         all_sprites.update()
         clock.tick(FPS)
         pygame.display.flip()
-    pygame.quit()
+    screen.fill(pygame.Color("black"))
+    intro_text = ["The tale of chelik", "",
+                  "Вот вы и прошли демо версию",
+                  f"вы молодец ведь вы умерли всего {all_deaths} раз.",
+                  "Возможно, если мы привлечем инвестиции,",
+                  "то в будущем будет продолжение."]
+    fon = pygame.transform.scale(load_image('end_fon.jfif'), (WIDTH, HEIGHT))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+    quit_button = pygame.draw.rect(screen, (244, 0, 0), (800, 600, 100, 50))
+    ext_text = font.render("Выйти", 1, pygame.Color('black'))
+    screen.blit(ext_text, (817, 614))
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if pygame.mouse.get_pos() >= (800, 600):
+                    if pygame.mouse.get_pos() <= (900, 650):
+                        terminate()
+                        running = False
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN:
+                return
+        try:
+            pygame.display.flip()
+        except pygame.error:
+            pass
+        clock.tick(FPS)
+    return True
 
 
 if __name__ == "__main__":
@@ -440,8 +509,10 @@ if __name__ == "__main__":
         print("Ну и зачем ты заходил?")
         exit(0)
     screen = pygame.display.set_mode(size)
-    tile_images = {'wall': load_image('box.png'), 'empty': load_image('wall.png'), 'door': load_image("Basic_Door_Pixel.png"),
-                    'window': load_image("window.png"), "key": load_image("key1.png"), 'spike': load_image('Spike_Pixel.png')}
+    tile_images = {'wall': load_image('box.png'), 'empty': load_image('wall.png'),
+                   'door': load_image("Basic_Door_Pixel.png"),
+                   'window': load_image("window.png"), "key": load_image("key1.png"),
+                   'spike': load_image('Spike_Pixel.png'), 'sky': load_image("sky.png")}
     tile_width, tile_height = WIDTH // 16, HEIGHT // 13
     level_map = load_level('map1.txt')
     level_x, level_y, list_of_xys, listOFkeys, listOfdoors, lOFspikes = generate_level(level_map)
@@ -451,4 +522,6 @@ if __name__ == "__main__":
     doorOpened = pygame.mixer.Sound("doorOpened.wav")
     for i in range(10):
         clock.tick(FPS)
-    main()
+    last_flag = main()
+    if not last_flag:
+        pygame.quit()
