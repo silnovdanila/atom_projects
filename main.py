@@ -67,10 +67,6 @@ def start_screen():
         clock.tick(FPS)
 
 
-def end_screen(d):
-    global all_deaths, screen
-
-
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y, chislo):
         super().__init__(all_sprites)
